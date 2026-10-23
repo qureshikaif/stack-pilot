@@ -1,0 +1,35 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - name: go test
+        run: go test ./...
+        env:
+          # Runners are throwaway machines, so the registry test is safe here.
+          STACKPILOT_REGISTRY_TESTS: "1"
+      - name: build
+        run: go build -o bin/ ./cmd/stackpilot
+      - name: setup plan (dry run)
+        shell: bash
+        run: |
+          ./bin/stackpilot setup --yes --dry-run \
+            --template node,python,react-native,android \
+            --editor vscode,cursor --ai claude-code,codex
+      - name: doctor on this repo
+        shell: bash
+        run: ./bin/stackpilot doctor . || true
