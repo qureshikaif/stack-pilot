@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -172,7 +173,7 @@ func TestExtractZip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm()&0o100 == 0 {
+	if runtime.GOOS != "windows" && info.Mode().Perm()&0o100 == 0 { // Windows has no executable bit
 		t.Errorf("executable bit lost: %v", info.Mode())
 	}
 
@@ -212,7 +213,7 @@ func TestProfileLinesSkipsExisting(t *testing.T) {
 	e := &Env{
 		Platform: Platform{Home: "/Users/me"},
 		origEnv:  map[string]string{"JAVA_HOME": "/jdk"},
-		origPath: map[string]bool{"/opt/homebrew/bin": true},
+		origPath: map[string]bool{pathKey("/opt/homebrew/bin"): true},
 		applied: Activation{
 			Vars: []Var{{"JAVA_HOME", "/jdk"}, {"ANDROID_HOME", "/Users/me/Library/Android/sdk"}},
 			Path: []string{"/opt/homebrew/bin", "/Users/me/Library/Android/sdk/platform-tools"},
@@ -237,7 +238,7 @@ func TestWriteProfileBacksUp(t *testing.T) {
 	if b, _ := os.ReadFile(backup); string(b) != "echo hi\n" {
 		t.Errorf("backup content = %q", b)
 	}
-	if info, _ := os.Stat(path); info.Mode().Perm() != 0o600 {
+	if info, _ := os.Stat(path); runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Errorf("mode changed to %v", info.Mode())
 	}
 	if added, backup, _ := writeProfile(path, []string{`export A="1"`}); added != nil || backup != "" {

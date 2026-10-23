@@ -40,15 +40,17 @@ func TestLedgerRoundTrip(t *testing.T) {
 }
 
 func TestSafeToDelete(t *testing.T) {
-	home := "/home/me"
+	// Real temp paths, so the test works with Windows paths too.
+	home := filepath.Join(t.TempDir(), "me")
+	sep := string(filepath.Separator)
 	tests := map[string]bool{
-		"/home/me/.local/bin/uv": true,
-		"/home/me":               false, // never the home folder itself
-		"/home/me/":              false,
-		"/home/me/../other":      false,
-		"/home/meow/x":           false,
-		"/usr/local/bin/uv":      false,
-		"relative/path":          false,
+		filepath.Join(home, ".local", "bin", "uv"): true,
+		home:                              false, // never the home folder itself
+		home + sep:                        false,
+		home + sep + ".." + sep + "other": false,
+		home + "ow" + sep + "x":           false,
+		filepath.Join(t.TempDir(), "uv"):  false,
+		filepath.Join("relative", "path"): false,
 	}
 	for p, want := range tests {
 		if got := safeToDelete(p, home); got != want {
@@ -88,8 +90,12 @@ func TestUndoActions(t *testing.T) {
 		}
 	}
 
-	files := e.undoAction(Record{Undo: Undo{Method: "files", Paths: []string{"/home/me/.local/bin/claude", "/opt/sdk/cmdline-tools/latest"}}})
-	if !reflect.DeepEqual(files.Remove, []string{"/home/me/.local/bin/claude"}) || !strings.Contains(files.Manual, "/opt/sdk") {
+	home := t.TempDir()
+	inside := filepath.Join(home, ".local", "bin", "claude")
+	outside := filepath.Join(t.TempDir(), "sdk", "cmdline-tools", "latest")
+	fe := &Env{Platform: Platform{OS: runtime.GOOS, Home: home}}
+	files := fe.undoAction(Record{Undo: Undo{Method: "files", Paths: []string{inside, outside}}})
+	if !reflect.DeepEqual(files.Remove, []string{inside}) || !strings.Contains(files.Manual, outside) {
 		t.Errorf("files action = %+v", files)
 	}
 	if a := e.undoAction(Record{Title: "Homebrew", Undo: Undo{Method: "manual", Package: "run this"}}); len(a.Commands) != 0 || !strings.Contains(a.Manual, "run this") {
