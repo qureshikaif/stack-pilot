@@ -33,3 +33,47 @@ jobs:
       - name: doctor on this repo
         shell: bash
         run: ./bin/stackpilot doctor . || true
+
+  # Build release archives locally and install them with the install scripts,
+  # so the scripts are tested before any release is published.
+  install-scripts:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --snapshot --clean
+      - name: install.sh
+        if: runner.os != 'Windows'
+        run: |
+          (cd dist && python3 -m http.server 8765 >/dev/null 2>&1 &)
+          sleep 2
+          STACKPILOT_BASE_URL=http://127.0.0.1:8765 sh install.sh
+          "$HOME/.local/bin/stackpilot" version
+      - name: install.ps1 (PowerShell 7)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Start-Process python -ArgumentList '-m', 'http.server', '8765' -WorkingDirectory dist -WindowStyle Hidden
+          Start-Sleep 3
+          $env:STACKPILOT_BASE_URL = 'http://127.0.0.1:8765'
+          Get-Content install.ps1 -Raw | iex
+          & "$env:LOCALAPPDATA\Programs\stackpilot\stackpilot.exe" version
+          $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+          if ($userPath -notlike "*Programs\stackpilot*") { throw "install dir not added to user PATH: $userPath" }
+      - name: install.ps1 again (Windows PowerShell 5.1, already installed)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $env:STACKPILOT_BASE_URL = 'http://127.0.0.1:8765'
+          Get-Content install.ps1 -Raw | iex
+          $count = ([Environment]::GetEnvironmentVariable('Path', 'User') -split ';' | Where-Object { $_ -like '*Programs\stackpilot*' }).Count
+          if ($count -ne 1) { throw "expected the install dir on PATH once, found $count" }

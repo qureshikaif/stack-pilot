@@ -1,0 +1,56 @@
+# Builds release binaries when a v* tag is pushed (.github/workflows/release.yml).
+# Try it locally with: goreleaser release --snapshot --clean
+version: 2
+
+project_name: stackpilot
+
+builds:
+  - main: ./cmd/stackpilot
+    binary: stackpilot
+    env:
+      - CGO_ENABLED=0 # static binaries with no system dependencies
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/qureshikaif/stack-pilot/internal/cli.Version={{ .Version }}
+
+archives:
+  # No version in the name, so the install scripts can always fetch
+  # releases/latest/download/stackpilot_<os>_<arch>.tar.gz.
+  - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-dev"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^Merge"
+
+release:
+  footer: |
+    ## Install
+
+    **macOS / Linux**
+    ```sh
+    curl -fsSL https://raw.githubusercontent.com/qureshikaif/stack-pilot/main/install.sh | sh
+    ```
+
+    **Windows (PowerShell)**
+    ```powershell
+    irm https://raw.githubusercontent.com/qureshikaif/stack-pilot/main/install.ps1 | iex
+    ```
+
+    Or download the archive for your system below and check it against `checksums.txt`.

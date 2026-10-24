@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strings"
 
 	"github.com/qureshikaif/stack-pilot/internal/doctor"
@@ -17,7 +18,19 @@ import (
 	"github.com/qureshikaif/stack-pilot/internal/setup"
 )
 
+// Version is set at release build time (see .goreleaser.yaml).
 var Version = "dev"
+
+// version falls back to the module version for `go install ...@v0.1.0` builds.
+func version() string {
+	if Version != "dev" {
+		return Version
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		return strings.TrimPrefix(bi.Main.Version, "v")
+	}
+	return Version
+}
 
 const usage = `stackpilot — figure out what a repo needs and whether your machine has it
 
@@ -105,7 +118,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		printDoctor(stdout, r, useColor(stdout))
 		return code
 	case "version", "--version", "-v":
-		fmt.Fprintln(stdout, "stackpilot", Version)
+		fmt.Fprintln(stdout, "stackpilot", version())
 		return 0
 	case "help", "-h", "--help":
 		fmt.Fprint(stdout, usage)

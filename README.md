@@ -48,21 +48,51 @@ StackPilot is **early-stage**. Expect rough edges and please [open an issue](htt
 
 ## Install
 
-You need [Go](https://go.dev/dl/) 1.27 or newer.
+**macOS / Linux**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/qureshikaif/stack-pilot/main/install.sh | sh
+```
+
+**Windows (PowerShell)**
+
+```powershell
+irm https://raw.githubusercontent.com/qureshikaif/stack-pilot/main/install.ps1 | iex
+```
+
+Each script downloads the binary for your OS and CPU from the [latest release](https://github.com/qureshikaif/stack-pilot/releases/latest), checks its SHA-256 against the release's `checksums.txt`, and installs it:
+
+| | Installs to | PATH |
+|-|-------------|------|
+| macOS / Linux | `~/.local/bin/stackpilot` | Tells you the line to add if it isn't already on your `PATH` |
+| Windows | `%LOCALAPPDATA%\Programs\stackpilot\stackpilot.exe` | Added to your user `PATH` automatically |
+
+No Go, Node.js or other runtime is needed: it's a single static binary. Run the same command again to update. You can set these environment variables before running the script:
+- `STACKPILOT_VERSION=v0.1.0` to install a specific version.
+- `STACKPILOT_INSTALL_DIR` to choose a different install folder.
+
+<details>
+<summary>Other ways to install</summary>
+
+**Manual download:** get the archive for your system from [Releases](https://github.com/qureshikaif/stack-pilot/releases), check it against `checksums.txt`, extract it, and put `stackpilot` somewhere on your `PATH`.
+
+**With Go 1.27+:**
 
 ```sh
 go install github.com/qureshikaif/stack-pilot/cmd/stackpilot@latest
 ```
 
-This puts `stackpilot` in `$(go env GOPATH)/bin`; make sure that's on your `PATH`.
-
-Or build from source:
+**From source:**
 
 ```sh
 git clone https://github.com/qureshikaif/stack-pilot.git
 cd stack-pilot
 make build        # creates bin/stackpilot
 ```
+
+**Uninstalling StackPilot itself:** delete the binary (`~/.local/bin/stackpilot`, or the `%LOCALAPPDATA%\Programs\stackpilot` folder on Windows). Run `stackpilot uninstall` first if you want to remove what it set up.
+
+</details>
 
 ## Quick start
 
@@ -197,7 +227,17 @@ stackpilot uninstall android-avd android-sdk --yes
 ```sh
 make test       # go vet + go test
 make build      # bin/stackpilot
+goreleaser release --snapshot --clean   # build all release archives into dist/
 ```
+
+### Releasing
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The [release workflow](.github/workflows/release.yml) runs the tests, builds binaries for macOS, Linux and Windows (amd64 and arm64) with [GoReleaser](https://goreleaser.com), publishes a GitHub Release with `checksums.txt`, and then installs that release with `install.sh` / `install.ps1` on all three OSes to confirm it works.
 
 Optional tests:
 
@@ -210,7 +250,10 @@ STACKPILOT_NETWORK_TESTS=1 go test -run Network ./internal/setup/
 STACKPILOT_REGISTRY_TESTS=1 go test ./internal/setup/
 ```
 
-CI runs the tests, plus a dry run of `setup`, on Ubuntu, macOS and Windows for every push.
+On every push, CI runs these on Ubuntu, macOS and Windows:
+- the tests;
+- a dry run of `setup`;
+- the install scripts, against locally built release archives.
 
 ### Project layout
 
@@ -237,7 +280,7 @@ To support a new tool, add a step in `internal/setup/catalog.go` with its packag
 - `doctor` checks for Android projects (JDK ↔ Gradle compatibility, `compileSdk` vs installed platforms)
 - `stackpilot fix`: install whatever `doctor` found missing in a repo
 - Fedora (dnf) support, Flutter template
-- Prebuilt binaries, so you don't need Go to install StackPilot
+- Homebrew tap, Scoop and winget packages
 
 ## Contributing
 
