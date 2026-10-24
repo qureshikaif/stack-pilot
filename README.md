@@ -1,6 +1,8 @@
 # StackPilot
 
 [![ci](https://github.com/qureshikaif/stack-pilot/actions/workflows/ci.yml/badge.svg)](https://github.com/qureshikaif/stack-pilot/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/qureshikaif/stack-pilot)](https://github.com/qureshikaif/stack-pilot/releases/latest)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **Set up your machine for a tech stack with one command, check any repo against it, and undo it cleanly.**
 
@@ -285,3 +287,7 @@ To support a new tool, add a step in `internal/setup/catalog.go` with its packag
 ## Contributing
 
 Bug reports are especially welcome from Windows and Linux users, with the output of `stackpilot setup --dry-run`. Before opening a pull request, run `make test`.
+
+## License
+
+[MIT](LICENSE) © 2026 Kaif Qureshi
